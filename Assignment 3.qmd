@@ -1,0 +1,117 @@
+---
+title: "Assignment 3"
+author: "Samuel Obeng Nkrumah"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(haven)
+#importing dataset
+Dataset <- read_sav("P6003.A4.sav")
+view(Dataset)
+
+library(flexplot)
+#Visualizing univariate distributions
+flexplot(swl~1, data=Dataset)
+flexplot(tipm.E~1, data=Dataset)
+flexplot(tipm.N~1, data=Dataset)
+
+#Visualizing bivariate correlations between variables
+flexplot(swl~tipm.N, data=Dataset)
+flexplot(swl~tipm.E, data=Dataset)
+flexplot(tipm.E~tipm.N, data=Dataset)
+
+#Selecting relevant variables to compute for descriptive statistics
+selected_vars <- Dataset[c( "swl", "tipm.E", "tipm.N")]
+# Compute means and standard deviations
+summary_stats <- summary(selected_vars)
+sd_values <- sapply(selected_vars, sd, na.rm = TRUE)
+# Compute correlations
+correlations <- cor(selected_vars, use = "pairwise.complete.obs")
+# Print results
+print(summary_stats)
+print(sd_values)
+print(correlations)
+
+#loading lme4 package
+library(lme4)
+#loading lmerTest to get p-values
+library(lmerTest)
+library(broom.mixed)
+
+#Run a baseline linear mixed model for outcome with random intercept only  
+baseline_mod <- lmer (swl ~ 1+(1|id)+(1|day), data = Dataset,REML = TRUE)
+#getting summary of baseline model
+summary(baseline_mod)
+#Compute ICC with flexplot package
+icc(baseline_mod)
+
+#running a reduced model with Extraversion as predictors with random intercept 
+model1 <- lmer(swl ~ tipm.E + (1|id) + (1|day), data=Dataset, REML=TRUE)
+#getting summary 
+summary(model1)
+#running a reduced model with Neuroticism as predictors with random intercept
+model2 <- lmer(swl ~ tipm.N + (1|id) + (1|day), data=Dataset, REML=TRUE)
+#getting summary 
+summary(model2)
+#comparing models
+model.comparison(model1, model2)
+
+#running a full model with both extraversion and Neuroticism as predictors with random intercept at id and day
+model3 <- lmer(swl ~ tipm.E + tipm.N + (1|id) + (1|day), data=Dataset, REML=TRUE)
+#getting summary 
+summary(model3)
+#comparing models
+model.comparison(model2, model3)
+
+#running a full model with random intercept at only id
+model4 <- lmer(swl ~ tipm.E + tipm.N + (1|id), data=Dataset, REML=TRUE)
+#get summary
+summary(model4)
+#comparing model with both extraversion and Neuroticism as predictors with random intercept id to the model with random intercept at both id and day
+model.comparison(model3, model4)
+
+#running a full model with both extraversion and Neuroticism as predictors with random intercept at day only
+model5 <- lmer(swl ~ tipm.E +tipm.N + (1|day), data=Dataset, REML=TRUE)
+#get summary
+summary(model5)
+#comparing models with extraversion and neuroticism as predictors with random intercept at id with the model with random intercept at only day
+model.comparison(model4, model5)
+
+
+#running model with extraversion and neuroticism as predictors with random slope for both at id 
+model6 <- lmer(swl ~ tipm.E + tipm.N+ (tipm.E+tipm.N|id), data=Dataset, REML=TRUE)
+#getting summary
+summary(model6)
+#comparing model with extraversion and neuroticism as predictors with random slope at id to the one with random intercept at id
+model.comparison(model4, model6)
+
+#running a full model with both random slopes at id and day
+model7 <- lmer(swl ~ tipm.E + tipm.N+ (tipm.E+tipm.N|id) + (tipm.E+tipm.N|day), data=Dataset, REML=TRUE)
+#getting summary
+summary(model7)
+#comparing model with random slopes at id and day with model with random slope at only id.
+model.comparison(model6, model7)
+
+#Visualize the selected model
+visualize(model6, plot = "model")
+
+#Get diagnostics of the selected model
+visualize(model6, plot = "residuals" )
+
+library(broom.mixed)
+#getting estimates with confidence intervals from the selected model.
+tidy(model6, conf.int = TRUE)
+#loading performance package to get R2 estimates
+library(performance)
+#Get R2 estimates
+r2(model6)
+
+library(car)
+# running VIF for multicollinearity
+vif(model6)
+
+```
